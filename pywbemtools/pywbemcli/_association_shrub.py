@@ -43,12 +43,11 @@ import six
 import click
 
 from asciitree import LeftAligned
-from pywbem import CIMInstanceName, CIMClassName, CIMFloat, CIMInt, CIMError, \
-    CIMDateTime
+from pywbem import CIMClassName, CIMError
 from pywbem._nocasedict import NocaseDict
 
-from ._common import shorten_path_str, sort_cimobjects
-from .._utils import ensure_unicode, to_unicode, get_terminal_width
+from ._common import shorten_path_str, sort_cimobjects, to_wbem_uri_folded
+from .._utils import get_terminal_width
 from .._output_formatting import output_format_is_table, format_table, \
     warning_msg
 
@@ -619,104 +618,7 @@ class AssociationShrub(object):
         # Remove host and namespace if same as source instance
         path = self.simplify_path(path)
 
-        path_str = path.to_wbem_uri(format=format)
-        if len(path_str) <= max_len:
-            return path_str
-
-        # Otherwise recreate the wbem uri and  fold the
-        # keybindings. This folds the keybindings as they are mapped back to
-        # strings. Note that this recreates the much of the wbemuri method
-        # except that it folds keybindings.
-
-        ret = []
-
-        def case(astring):
-            """Return the string in the correct lexical case for the format."""
-            if format == 'canonical':
-                astring = astring.lower()
-            return astring
-
-        def case_sorted(keys):
-            """Return the keys in the correct order for the format."""
-            if format == 'canonical':
-                case_keys = [case(k) for k in keys]
-                keys = sorted(case_keys)
-            return keys
-
-        if format not in ('standard', 'canonical', 'cimobject', 'historical'):
-            raise ValueError('Invalid format argument: {0}'.format(format))
-
-        if path.host is not None and format != 'cimobject':
-            # The CIMObject format assumes there is no host component
-            ret.append('//')
-            ret.append(case(path.host))
-
-        if path.host is not None or format not in ('cimobject', 'historical'):
-            ret.append('/')
-
-        if path.namespace is not None:
-            ret.append(case(path.namespace))
-
-        if path.namespace is not None or format != 'historical':
-            ret.append(':')
-
-        ret.append(case(path.classname))
-
-        ret.append('.\n')
-
-        for key in case_sorted(six.iterkeys(path.keybindings)):
-            value = path.keybindings[key]
-
-            ret.append(key)
-            ret.append('=')
-
-            if isinstance(value, six.binary_type):
-                value = to_unicode(value)
-
-            if isinstance(value, six.text_type):
-                # string, char16
-                ret.append('"')
-                ret.append(value.
-                           replace('\\', '\\\\').
-                           replace('"', '\\"'))
-                ret.append('"')
-            elif isinstance(value, bool):
-                # boolean
-                # Note that in Python a bool is an int, so test for bool first
-                ret.append(str(value).upper())
-            elif isinstance(value, (CIMFloat, float)):
-                # realNN
-                # Since Python 2.7 and Python 3.1, repr() prints float numbers
-                # with the shortest representation that does not change its
-                # value. When needed, it shows up to 17 significant digits,
-                # which is the precision needed to round-trip double precision
-                # IEE-754 floating point numbers between decimal and binary
-                # without loss.
-                ret.append(repr(value))
-            elif isinstance(value, (CIMInt, int, _Longint)):
-                # intNN
-                ret.append(str(value))
-            elif isinstance(value, CIMInstanceName):
-                # reference
-                ret.append('"')
-                ret.append(value.to_wbem_uri(format=format).
-                           replace('\\', '\\\\').
-                           replace('"', '\\"'))
-                ret.append('"')
-            elif isinstance(value, CIMDateTime):
-                # datetime
-                ret.append('"')
-                ret.append(str(value))
-                ret.append('"')
-            else:
-                raise TypeError(
-                    "Invalid type {0} in keybinding value: {1}={2}"
-                    .format(type(value), key, value))
-            ret.append(',\n')
-
-        del ret[-1]
-
-        return ensure_unicode(''.join(ret))
+        return to_wbem_uri_folded(path, format=format, max_len=max_len)
 
     def build_inst_names(self, inst_names_tuple, ref_cln, replacements,
                          fullpath=None):

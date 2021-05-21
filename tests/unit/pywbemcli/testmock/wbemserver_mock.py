@@ -21,21 +21,39 @@ in pywbemcli so that other dictionary definitions of the mock can be created.
 """
 
 from __future__ import absolute_import, print_function
-
+import sys
 
 from tests.unit.pywbemcli.testmock.wbemserver_mock_class import *  # noqa: F403
 
-# TODO: Future. switch to this mock script setup
-# def setup(conn, server, verbose):
-#    """
-#    Setup function to initiate the setup of the mock environment.
-#    """
-#    WbemServerMock(conn, server, interop_ns='interop', verbose=verbose)
+#
+def _setup(conn, server, verbose):
+    """
+    _setup call the WBEMServerMock class to install the mock wbem server
+    """
+    WbemServerMock(conn, server,
+                   interop_ns=None,
+                   verbose=verbose)
 
-# Execute the WBEM Server configuration build using the old mock script
-# interface
+# Execute setup depending on the version of python
 
-# pylint: disable=undefined-variable
-WbemServerMock(CONN, SERVER,  # noqa: F821, F405
-               interop_ns=None,
-               verbose=VERBOSE)  # noqa: F821, F405
+if sys.version_info >= (3, 5):
+    # New-style setup
+
+    # If the function is defined directly, it will be detected and refused
+    # by the check for setup() functions on Python <3.5, despite being defined
+    # only conditionally. The indirect approach with exec() addresses that.
+    # pylint: disable=exec-used
+    exec("""
+def setup(conn, server, verbose):
+    _setup(conn, server, verbose)
+""")
+
+else:
+    # Old-style setup
+
+    global CONN  # pylint: disable=global-at-module-level
+    global SERVER  # pylint: disable=global-at-module-level
+    global VERBOSE  # pylint: disable=global-at-module-level
+
+    # pylint: disable=undefined-variable
+    _setup(CONN, SERVER, VERBOSE)  # noqa: F821

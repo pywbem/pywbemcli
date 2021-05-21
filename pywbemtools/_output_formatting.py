@@ -85,6 +85,21 @@ def output_format_is_table(output_format):
     return output_format in TABLE_FORMATS
 
 
+def output_format_is_cimobject(output_format):
+    """
+    Return boolean indicating whether an output format is a table format.
+
+    Parameters:
+
+      output_format (:term:`string`):
+         The output format keyword (e.g. 'mof') to be checked.
+
+    Returns:
+      bool: Boolean indicating whether the output format is a table format.
+    """
+    return output_format in CIM_OBJECT_FORMATS
+
+
 def output_format_in_groups(output_format, format_groups):
     """
     Return boolean indicating whether an output format is in a given format

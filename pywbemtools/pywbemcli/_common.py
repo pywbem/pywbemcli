@@ -34,11 +34,20 @@ from toposort import toposort_flatten
 
 from pywbem import CIMInstanceName, CIMInstance, CIMClass, \
     CIMQualifierDeclaration, CIMProperty, CIMClassName, \
-    cimvalue, Error
+    cimvalue, Error, CIMInt, CIMFloat, CIMDateTime
 from pywbem._nocasedict import NocaseDict
+
+# Same as in pwbem.cimtypes.py
+if six.PY2:
+    # pylint: disable=invalid-name,undefined-variable
+    _Longint = long  # noqa: F821
+else:
+    # pylint: disable=invalid-name
+    _Longint = int
 
 from ._cimvalueformatter import cimvalue_to_fmtd_string
 from .._output_formatting import DEFAULT_MAX_CELL_WIDTH
+from .._utils import ensure_unicode, to_unicode
 
 
 ######################################################################
@@ -252,9 +261,9 @@ def pick_multiple_from_list(context, options, title):
 
 def is_classname(astring):
     """
-    Test if the astring input is a classname or contains instance name
+    Test if the a string input is a classname or contains instance name
     components.  The existence of a period at the end of the name component
-    determines if it is a classname or instance name.
+    determines if it is a class name or instance name.
 
     Returns:
         True if classname. Otherwise it returns False
@@ -333,6 +342,143 @@ def verify_operation(txt, msg=None):
     if msg:
         click.echo('Request aborted')
     return False
+
+
+def to_wbem_uri_folded(path, format='standard', max_len=15):
+    # pylint: disable=redefined-builtin
+    """
+    Return the (untyped) WBEM URI string of this CIM instance path.
+    This method modifies the pywbem:CIMInstanceName.to_wbem_uri method
+    to return a reformatted string where components are on
+    separate lines if the length is longer than the max_len argument.
+
+    See :meth:`pywbem.CIMInstanceName.to_wbem_uri` for detailed
+    information. This method was derived from
+    :meth:`pywbem.CIMInstanceName.to_wbem_uri`
+
+    Parameters:
+
+      path (:class:`CIMInstanceName`):
+        The instance name to convert to a wbem uri and fold based on
+        the max_len parameter
+
+      format  (:term:`string`): Format for the generated WBEM URI string
+        using one of the formats defined in
+        :meth:`pywbem.CIMInstanceName.to_wbem_uri`
+
+      max_len (:term:`integer`):
+        Maximum length of the resulting URI before it is folded into
+        multiple lines.
+
+    Returns:
+
+      :term:`unicode string`: Untyped WBEM URI of the CIM instance path,
+      in the specified format.
+
+    Raises:
+
+      TypeError: Invalid type in keybindings
+      ValueError: Invalid format
+    """
+
+    path_str = path.to_wbem_uri(format=format)
+    if len(path_str) <= max_len:
+        return path_str
+
+    # Otherwise recreate the wbem uri and  fold the
+    # keybindings. This folds the keybindings as they are mapped back to
+    # strings. Note that this recreates the much of the pywbem wbemuri method
+    # except that it folds keybindings.
+
+    ret = []
+
+    def case(astring):
+        """Return the string in the correct lexical case for the format."""
+        if format == 'canonical':
+            astring = astring.lower()
+        return astring
+
+    def case_sorted(keys):
+        """Return the keys in the correct order for the format."""
+        if format == 'canonical':
+            case_keys = [case(k) for k in keys]
+            keys = sorted(case_keys)
+        return keys
+
+    if format not in ('standard', 'canonical', 'cimobject', 'historical'):
+        raise ValueError('Invalid format argument: {0}'.format(format))
+
+    if path.host is not None and format != 'cimobject':
+        # The CIMObject format assumes there is no host component
+        ret.append('//')
+        ret.append(case(path.host))
+
+    if path.host is not None or format not in ('cimobject', 'historical'):
+        ret.append('/')
+
+    if path.namespace is not None:
+        ret.append(case(path.namespace))
+
+    if path.namespace is not None or format != 'historical':
+        ret.append(':')
+
+    ret.append(case(path.classname))
+
+    ret.append('.\n')
+
+    for key in case_sorted(six.iterkeys(path.keybindings)):
+        value = path.keybindings[key]
+
+        ret.append(key)
+        ret.append('=')
+
+        if isinstance(value, six.binary_type):
+            value = to_unicode(value)
+
+        if isinstance(value, six.text_type):
+            # string, char16
+            ret.append('"')
+            ret.append(value.
+                       replace('\\', '\\\\').
+                       replace('"', '\\"'))
+            ret.append('"')
+        elif isinstance(value, bool):
+            # boolean
+            # Note that in Python a bool is an int, so test for bool first
+            ret.append(str(value).upper())
+        elif isinstance(value, (CIMFloat, float)):
+            # realNN
+            # Since Python 2.7 and Python 3.1, repr() prints float numbers
+            # with the shortest representation that does not change its
+            # value. When needed, it shows up to 17 significant digits,
+            # which is the precision needed to round-trip double precision
+            # IEE-754 floating point numbers between decimal and binary
+            # without loss.
+            ret.append(repr(value))
+        elif isinstance(value, (CIMInt, int, _Longint)):
+            # intNN
+            ret.append(str(value))
+        elif isinstance(value, CIMInstanceName):
+            # reference
+            ret.append('"')
+            ret.append(value.to_wbem_uri(format=format).
+                       replace('\\', '\\\\').
+                       replace('"', '\\"'))
+            ret.append('"')
+        elif isinstance(value, CIMDateTime):
+            # datetime
+            ret.append('"')
+            ret.append(str(value))
+            ret.append('"')
+        else:
+            raise TypeError(
+                "Invalid type {0} in keybinding value: {1}={2}"
+                .format(type(value), key, value))
+        ret.append(',\n')
+
+    del ret[-1]
+
+    return ensure_unicode(''.join(ret))
 
 
 def parse_wbemuri_str(wbemuri_str, namespace=None):
@@ -626,10 +772,13 @@ def process_invokemethod(context, objectname, methodname, namespace,
       methodname (:term:`string`):
         The name of the method to be executed
 
-      namespace()
-      options (:class:`py:dict`):
-        The command options dictionary.  Used to get the command namespace
-        and parameters.
+      namespace (:term:`string`):
+        String defining the current namespace used by the command or None
+        if the default namespace is to be used
+
+      parameters ():
+        The input parameters to be applied to the InvokeMethod
+
 
     """  # pylint: enable=line-too-long
 
@@ -668,9 +817,14 @@ def process_invokemethod(context, objectname, methodname, namespace,
     conn = context.pywbem_server.conn
     classname = objectname.classname
 
-    cim_class = conn.GetClass(
-        classname,
-        namespace=namespace, LocalOnly=False)
+    # if this is a string convert to a CIMClassname
+    if isinstance(objectname, six.string_types):
+        objectname = CIMClassName(objectname)
+
+    if namespace:
+        objectname.namespace = namespace
+
+    cim_class = conn.GetClass(classname, namespace=namespace, LocalOnly=False)
 
     cim_methods = cim_class.methods
     if methodname not in cim_methods:
@@ -862,7 +1016,7 @@ def get_subclass_names(classes, classname=None, deep_inheritance=None):
     if classname not in classname_dict:
         raise ValueError("Classname {} not found in classes".format(classname))
 
-    # Recurse The classname_dict hierarchy to get subclass names
+    # Recurse the classname_dict hierarchy to get subclass names
     rtn_classnames = classname_dict[classname]
     if deep_inheritance:
         if rtn_classnames:
@@ -883,7 +1037,7 @@ def shorten_path_str(path, replacements, fullpath):
     """
     Create a short-form path str from the input CIMInstanceName with selected
     components shortened to just a single known character.  This allows
-    modifying the path string to replace selected key/value paris with a single
+    modifying the path string to replace selected key/value pairs with a single
     character. Thus where the original string is very long and contains
     repeated key bindings (ex. CreationClassName) we can shorten the path
     string by reducing selected key/value pairs to just ~

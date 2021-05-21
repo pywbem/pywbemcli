@@ -144,16 +144,17 @@ Help text for ``pywbemcli``:
       -h, --help                      Show this help message.
 
     Commands:
-      class       Command group for CIM classes.
-      instance    Command group for CIM instances.
-      namespace   Command group for CIM namespaces.
-      profile     Command group for WBEM management profiles.
-      qualifier   Command group for CIM qualifier declarations.
-      server      Command group for WBEM servers.
-      statistics  Command group for WBEM operation statistics.
-      connection  Command group for WBEM connection definitions.
-      help        Show help message for interactive mode.
-      repl        Enter interactive mode (default).
+      class         Command group for CIM classes.
+      instance      Command group for CIM instances.
+      namespace     Command group for CIM namespaces.
+      profile       Command group for WBEM management profiles.
+      qualifier     Command group for CIM qualifier declarations.
+      server        Command group for WBEM servers.
+      statistics    Command group for WBEM operation statistics.
+      subscription  Command group to manage WBEM subscriptions.
+      connection    Command group for WBEM connection definitions.
+      help          Show help message for interactive mode.
+      repl          Enter interactive mode (default).
 
 
 .. _`pywbemcli class --help`:
@@ -2428,4 +2429,416 @@ Help text for ``pywbemcli statistics status`` (see :ref:`statistics status comma
 
     Command Options:
       -h, --help  Show this help message.
+
+
+.. _`pywbemcli subscription --help`:
+
+pywbemcli subscription --help
+-----------------------------
+
+
+
+Help text for ``pywbemcli subscription`` (see :ref:`subscription command group`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription COMMAND [ARGS]...
+
+      Command group to manage WBEM subscriptions.
+
+      This group uses the pywbem subscription manager to view and manage CIM Indication subscripitons for a WBEM Server.
+
+      In addition to the command-specific options shown in this help text, the general options (see 'pywbemcli --help')
+      can also be specified before the command. These are NOT retained after the command is executed.
+
+    Command Options:
+      -h, --help  Show this message and exit.
+
+    Commands:
+      add-destination      TODO: modify to allow adding multiple destinations by repeating url option Create a new...
+      add-filter           Add a new indication filter.
+      add-subscription     Add a new indication subscription.
+      list                 List indication subscriptions.
+      list-destinations    list subscription destinations objects List the existing CIM indication destinations on the...
+      list-filters         list subscription filters.
+      list-subscriptions   Show indication subscription overview.
+      remove-destination   Delete a destination from the server The destination to be removed can be idenitified by TODO
+      remove-filter        Remove a subscription filter.
+      remove-server        Remove the server identified by the server_id.
+      remove-subscription  Remove indication subscription(s) from a WBEM server, by deleting the indication subscription...
+      test-indication      Generate test indications.
+
+
+.. _`pywbemcli subscription add-destination --help`:
+
+pywbemcli subscription add-destination --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription add-destination`` (see :ref:`subscription add-destination command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription add-destination
+
+      TODO: modify to allow adding multiple destinations by repeating url option Create a new listener destination.
+
+      The listener destination defines the location of a WBEM indication listener and includes all the parameters to
+      define that listener.
+
+      This command automatically creates a listener destination instance (of CIM class "CIM_ListenerDestinationCIMXML")
+      for each specified listener URL in the Interop namespace of the specified WBEM server.
+
+      The listener destination is automatically created on the target WBEM connection.
+
+    Command Options:
+      -l, --listener-url URI  Add a listener destination url for indications. this includes the schema (http or https, the
+                              host name and the listener port
+
+      --owned                 Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -h, --help              Show this help message.
+
+
+.. _`pywbemcli subscription add-filter --help`:
+
+pywbemcli subscription add-filter --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription add-filter`` (see :ref:`subscription add-filter command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription add-filter
+
+      Add a new indication filter.
+
+      This command adds a :term:`dynamic indication filter` to a WBEM server, by creating an indication filter instance
+      (of CIM class "CIM_IndicationFilter") in the Interop namespace of the server.
+
+      The new indication filter is defined by the input parameters.  If the options are --owned and --filter_id, the
+      filter is only added if there is no filter with the same filter_id in the WBEM server. Otherwise, the existing
+      filter with the defined_filter_id is modified
+
+      if --owned is not specified, either the --filter-id or --name parameter may be used to define the filter ``Name``
+      property.
+
+      The --name option should be used in cases where the user needs to have control over the filter name (e.g. because a
+      DMTF management profile requires a particular name), but it cannot be used for owned filters.
+
+      Owned indication filters are added or updated conditionally: If the indication filter instance to be added is
+      already registered with this subscription manager and has the same property values, it is not created or modified.
+      If it has the same path but different property values, it is modified to get the desired property values. If an
+      instance with this path does not exist yet (the normal case), it is created.
+
+      Permanent indication filters are created unconditionally, and it is up to the user to ensure that such an instance
+      does not exist yet.
+
+    Command Options:
+      -q, --query filter       Filter query definition. This is a SELECT statement in the query language defined in the
+                               filter-query-language parameter
+
+      --query-language TEXT    Filter query language for this subscription The query languages normally implemented are
+                               "DMTF:CQL" and "WQL" .  Default: WQL
+
+      --source-namespace TEXT  The namespace for which the query is defined. If not  defined, the default namespace of the
+                               server is used
+
+      --name TEXT              Value for the name parameter.
+      --filter-id TEXT         Text that is used to define the name parameter.
+      --owned                  Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -h, --help               Show this help message.
+
+
+.. _`pywbemcli subscription add-subscription --help`:
+
+pywbemcli subscription add-subscription --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription add-subscription`` (see :ref:`subscription add-subscription command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription add-subscription
+
+      Add a new indication subscription.
+
+      Add a subscription to a WBEM server defined by the server_id for a particular set of indications defined by an
+      indication filter and for a particular WBEM listener defined by the instance path of the listener destinations, by
+      creating indication subscription instances (of CIM class "CIM_IndicationSubscription") in the Interop namespace of
+      the server.
+
+      The specified indication filter may be owned, permanent or static.
+
+      The specified listener destinations may be owned, permanent or static.
+
+      When creating permanent subscriptions, the indication filter and the listener destinations must not be owned.
+
+      Owned subscriptions are added or updated conditionally: If the subscription instance to be added is already
+      registered with this subscription manager and has the same path , it is not created.
+
+      Permanent subscriptions are created unconditionally, and it is up to the user to ensure that such an instance does
+      not exist yet.
+
+      Upon successful return of this method, the added subscription is active, so that the specified WBEM listeners may
+      immediately receive indications.
+
+    Command Options:
+      --select    Select filter and destination to include in this subscription.
+      --owned     Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -h, --help  Show this help message.
+
+
+.. _`pywbemcli subscription list --help`:
+
+pywbemcli subscription list --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription list`` (see :ref:`subscription list command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription list
+
+      List indication subscriptions.
+
+      This command provides an overview of the subscriptions, filters, and destinations
+
+    Command Options:
+      --owned        Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -d, --detail   Show all properties of the instances. Otherwise only non-null or predefined property values are
+                     displayed
+
+      -p, --paths    Show CIMInstanceName elements of the instances.
+      -s, --summary  If True, show only summary count of instances
+      -h, --help     Show this help message.
+
+
+.. _`pywbemcli subscription list-destinations --help`:
+
+pywbemcli subscription list-destinations --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription list-destinations`` (see :ref:`subscription list-destinations command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription list-destinations
+
+      list subscription destinations objects
+
+      List the existing CIM indication destinations on the current connection
+
+    Command Options:
+      --owned        Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -d, --detail   Show all properties of the instances. Otherwise only non-null or predefined property values are
+                     displayed
+
+      -p, --paths    Show CIMInstanceName elements of the instances.
+      -s, --summary  If True, show only summary count of instances
+      -h, --help     Show this help message.
+
+
+.. _`pywbemcli subscription list-filters --help`:
+
+pywbemcli subscription list-filters --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription list-filters`` (see :ref:`subscription list-filters command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription list-filters
+
+      list subscription filters.
+
+      List existing CIM indication subscriptions on the current connection
+
+    Command Options:
+      --name TEXT       Value for the name parameter.
+      --filter-id TEXT  Text that is used to define the name parameter.
+      --owned           Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -d, --detail      Show all properties of the instances. Otherwise only non-null or predefined property values are
+                        displayed
+
+      -p, --paths       Show CIMInstanceName elements of the instances.
+      -s, --summary     If True, show only summary count of instances
+      -h, --help        Show this help message.
+
+
+.. _`pywbemcli subscription list-subscriptions --help`:
+
+pywbemcli subscription list-subscriptions --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription list-subscriptions`` (see :ref:`subscription list-subscriptions command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription list-subscriptions
+
+      Show indication subscription overview.
+
+      This command displays an overview the owned subscriptions, filters, and destinations.
+
+      It displays the instances using the detail paths, or summary options
+
+    Command Options:
+      --owned        Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -d, --detail   Show all properties of the instances. Otherwise only non-null or predefined property values are
+                     displayed
+
+      -p, --paths    Show CIMInstanceName elements of the instances.
+      -s, --summary  If True, show only summary count of instances
+      -h, --help     Show this help message.
+
+
+.. _`pywbemcli subscription remove-destination --help`:
+
+pywbemcli subscription remove-destination --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription remove-destination`` (see :ref:`subscription remove-destination command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription remove-destination
+
+      Delete a destination from the server
+
+      The destination to be removed  can be idenitified by TODO
+
+    Command Options:
+      -n, --path destination  Delete by path name of the filter.
+      --select                Select filter to delete from select list of filters.
+      --owned                 Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -h, --help              Show this help message.
+
+
+.. _`pywbemcli subscription remove-filter --help`:
+
+pywbemcli subscription remove-filter --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription remove-filter`` (see :ref:`subscription remove-filter command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription remove-filter
+
+      Remove a subscription filter.
+
+      Filters to be removed are identified by either the filter_id or the name parameter and whether they are owned or now
+
+      The --select option allows the user to get a list of the paths of filters and selecting one to be removed
+
+    Command Options:
+      --select          Select filter to delete from select list of filters.
+      --name TEXT       Value for the name parameter.
+      --filter-id TEXT  Text that is used to define the name parameter.
+      --owned           Limit the operation to owned subscriptions, listener destinations or filters. Default: False
+      -h, --help        Show this help message.
+
+
+.. _`pywbemcli subscription remove-server --help`:
+
+pywbemcli subscription remove-server --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription remove-server`` (see :ref:`subscription remove-server command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription remove-server
+
+      Remove the server identified by the server_id. This command also unregisters listeners from these servers and
+      removes all owned indication subscriptions, owned indication filters, and owned listener destinations
+
+    Command Options:
+      -h, --help  Show this help message.
+
+
+.. _`pywbemcli subscription remove-subscription --help`:
+
+pywbemcli subscription remove-subscription --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription remove-subscription`` (see :ref:`subscription remove-subscription command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription remove-subscription
+
+      Remove indication subscription(s) from a WBEM server, by deleting the indication subscription instances in the
+      server.
+
+      The indication subscriptions must be owned or permanent (i.e. not static).
+
+      This operation does not remove the associated filter or destination instances.
+
+    Command Options:
+      --select    Select filter to delete from select list of filters.
+      -h, --help  Show this help message.
+
+
+.. _`pywbemcli subscription test-indication --help`:
+
+pywbemcli subscription test-indication --help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+Help text for ``pywbemcli subscription test-indication`` (see :ref:`subscription test-indication command`):
+
+
+::
+
+    Usage: pywbemcli [COMMAND-OPTIONS] subscription test-indication
+
+      Generate test indications.  This command executes a WBEM server dependent set of requests to generate test
+      indications.
+
+      Today, it only works for the OpenPegasus WBEM server and only if specific classes are implemented in a provider on
+      the server.  It creates an owned subscription and sends a method that tells the server to generate a number of test
+      indications.
+
+      If the owned option is set, the command will issue a message and wait for the user and then complete which will
+      close the subscription.  If not owned, the user must later delete the subscription.
+
+    Command Options:
+      -l, --listener-url URI  Listener destination url for indications. Default:http://localhost:25989
+      --count COUNT           Number of test indications to be requested. Default:10.
+      -h, --help              Show this help message.
 
