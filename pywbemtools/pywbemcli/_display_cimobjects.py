@@ -443,7 +443,7 @@ def _format_instances_as_rows(insts, max_cell_width=DEFAULT_MAX_CELL_WIDTH,
                     val_str, _ = cimvalue_to_fmtd_string(
                         p.value, p.type, indent=0, maxline=max_cell_width,
                         line_pos=0, end_space=0, avoid_splits=False,
-                        valuemapping=valuemapping)
+                        valuemapping=valuemapping, quote_strings=False)
 
             line.append(val_str)
         lines.append(line)

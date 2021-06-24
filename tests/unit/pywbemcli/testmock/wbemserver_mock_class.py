@@ -45,7 +45,8 @@ import os
 from pywbem import ValueMapping, CIMInstance, CIMInstanceName, CIMError, \
     CIM_ERR_ALREADY_EXISTS
 from pywbem_mock import FakedWBEMConnection, DMTFCIMSchema, \
-    CIMNamespaceProvider
+    CIMNamespaceProvider, CIMIndicationFilterProvider, \
+    CIMListenerDestinationProvider, CIMIndicationSubscriptionProvider
 
 DMTF_TEST_SCHEMA_VER = (2, 49, 0)
 
@@ -113,7 +114,10 @@ DEFAULT_WBEM_SERVER_MOCK_DEFAULT_DICT = {
                                 'CIM_ElementConformsToProfile',
                                 'CIM_ReferencedProfile',
                                 'CIM_ComputerSystem',
-                                'CIM_CIMOMStatisticalData'],
+                                'CIM_CIMOMStatisticalData',
+                                'CIM_ListenerDestinationCIMXML',
+                                'CIM_IndicationFilter',
+                                'CIM_IndicationSubscription'],
 
                     'root/cimv2': ['CIM_ElementConformsToProfile',
                                    'CIM_ComputerSystem']},
@@ -131,10 +135,9 @@ DEFAULT_WBEM_SERVER_MOCK_DEFAULT_DICT = {
                                       ' Released',
                        'GatherStatisticalData': False},
 
-    # TODO/FUTURE: WbemServerMock currently only builds the pywbem supplied
-    # CIM namespace provider.
     # User providers that are to be registered.
-    # 'user_providers': [CIMNamespaceProvider(conn.cimrepository)],
+    'user_providers': ['namespaceprovider',
+                       'subscriptionproviders'],
 
     'registered_profiles': [('DMTF', 'Indications', '1.1.0'),
                             ('DMTF', 'Profile Registration', '1.0.0'),
@@ -262,9 +265,19 @@ class WbemServerMock(object):
         # TODO/Future: Install user providers from configuration definition
         # For now, install the Namespace provider. The issue is knowing
         # exactly what input parameters are required for each user provider.
-        ns_provider = CIMNamespaceProvider(conn.cimrepository)
-        conn.register_provider(ns_provider, namespaces=self.interop_ns)
-
+        for provider in self.server_mock_data['user_providers']:
+            if provider == "namespaceprovider":
+                ns_provider = CIMNamespaceProvider(conn.cimrepository)
+                conn.register_provider(ns_provider, namespaces=self.interop_ns)
+            elif provider == 'subscriptionproviders':
+                reg_provider = CIMIndicationFilterProvider(conn.cimrepository)
+                conn.register_provider(reg_provider, namespaces=self.interop_ns)
+                reg_provider = CIMListenerDestinationProvider(
+                    conn.cimrepository)
+                conn.register_provider(reg_provider, namespaces=self.interop_ns)
+                reg_provider = CIMIndicationSubscriptionProvider(
+                    conn.cimrepository)
+                conn.register_provider(reg_provider, namespaces=self.interop_ns)
         # NOTE: The wbemserver is not usable until the instances for at
         # least object manager and namespaces have been inserted. Any attempt
         # to display the instance objects before that will fail because the
