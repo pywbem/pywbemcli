@@ -29,7 +29,9 @@ from .common_options_help_lines import CMD_OPTION_HELP_HELP_LINE
 TEST_DIR = os.path.dirname(__file__)
 SIMPLE_MOCK_FILE = 'simple_mock_model.mof'
 SIMPLE_MOCK_FILE_PATH = os.path.join(TEST_DIR, SIMPLE_MOCK_FILE)
-MOCK_SERVER_MODEL = os.path.join('testmock', 'wbemserver_mock.py')
+
+MOCK_SERVER_MODEL = os.path.join(TEST_DIR, 'testmock',
+                                 'wbemserver_mock_script.py')
 
 STATISTICS_HELP_LINES = [
     'Usage: pywbemcli [GENERAL-OPTIONS] statistics COMMAND [ARGS] '

@@ -1,7 +1,15 @@
 """
 Test mock script that installs the pywbem provided namespace provider
 CIMNamespaceProvider and the simple Interop and user namespace model
-defined in simple_interop_mock_model.mof.
+defined in simple_interop_mock_model.mof and then sets the pywbem_mock
+server to disable pull operations. This script is used to test the
+general options around enabling and disabling pull operations
+
+This mock script sets up a mock_environment with an interop namespace
+and a user namespace populaed with the simple_mock_model but with pull
+operations disabled so any execution of a pull operation
+directly returns a NOT_SUPPORTED error. It is used to test the operation
+of the pywbemcli client on servers where pull does not exist.
 
 This mock script uses 'new-style' setup for Python >=3.5 and 'old-style' setup
 otherwise, and is therefore useable for all supported Python versions.
@@ -47,6 +55,8 @@ def _setup(conn, server, verbose):
     if INTEROP_NAMESPACE not in conn.cimrepository.namespaces:
         conn.add_namespace(INTEROP_NAMESPACE)
 
+    conn.disable_pull_operations  # pylint: disable=pointless-statement
+
     if sys.version_info >= (3, 5):
         this_file_path = __file__
     else:
@@ -63,6 +73,9 @@ def _setup(conn, server, verbose):
                        'simple_mock_model.mof']
     mof_path = os.path.join(os.path.dirname(this_file_path), mof_file)
     conn.compile_mof_file(mof_path, namespace=None)
+
+    # Disable the pull operations for this test
+    conn.disable_pull_operations = True
 
     register_dependents(conn, this_file_path, dependent_files)
     ns_provider = pywbem_mock.CIMNamespaceProvider(conn.cimrepository)

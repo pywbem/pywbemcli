@@ -32,7 +32,8 @@ TEST_DIR = os.path.dirname(__file__)
 SIMPLE_MOCK_FILE = 'simple_mock_model.mof'
 INVOKE_METHOD_MOCK_FILE = 'simple_mock_invokemethod.py'
 
-MOCK_SERVER_MODEL = os.path.join('testmock', 'wbemserver_mock.py')
+MOCK_SERVER_MODEL = os.path.join(TEST_DIR, 'testmock',
+                                 'wbemserver_mock_script.py')
 
 # The following lists define the help for each command in terms of particular
 # parts of lines that are to be tested.
