@@ -35,7 +35,8 @@ import click
 import psutil
 import six
 
-from pywbem import WBEMListener, ListenerError
+from pywbem import WBEMListener, ListenerError, CIMInstance, CIMProperty, \
+    Uint16, WBEMConnection, Error
 
 from .._click_extensions import PywbemtoolsCommand, CMD_OPTS_TXT
 from .._options import add_options, help_option, validate_required_arg
@@ -388,6 +389,25 @@ def listener_list(context):
     commands.
     """
     context.execute_cmd(lambda: cmd_listener_list(context))
+
+
+@cli.command('test', cls=PywbemtoolsCommand, options_metavar=CMD_OPTS_TXT)
+@click.argument('name', type=str, metavar='NAME', required=False)
+@add_options(help_option)
+@click.pass_obj
+def listener_test(context, name):
+    """
+    Send a test indication to a named WBEM indication listener.
+
+    The indication is an alert indication with fixed properties. This allows
+    testing the listener and what it does with the indication.
+
+    Examples:
+
+      pywbemlistener test lis1
+    """
+    validate_required_arg(name, 'NAME')
+    context.execute_cmd(lambda: cmd_listener_test(context, name))
 
 
 ################################################################
@@ -1195,3 +1215,57 @@ def cmd_listener_list(context):
         click.echo("No running listeners")
     else:
         display_list_listeners(listeners, table_format=context.output_format)
+
+
+def cmd_listener_test(context, name):
+    """
+    Send a test indication to a named listener.
+    """
+    listeners = get_listeners(name)
+    if not listeners:
+        raise click.ClickException(
+            "No running listener found with name {}".format(name))
+    listener = listeners[0]
+
+    # Construct an alert indication
+    indication = CIMInstance("CIM_AlertIndication")
+    indication['IndicationIdentifier'] = \
+        CIMProperty('IndicationIdentifier', value=None, type='string')
+    indication['IndicationTime'] = datetime.now()
+    indication['AlertingElementFormat'] = Uint16(2)  # CIMObjectPath
+    indication['AlertingManagedElement'] = \
+        CIMProperty('AlertingManagedElement', value=None, type='string')
+    indication['AlertType'] = Uint16(2)  # Communications Alert
+    indication['Message'] = "Test message"
+    indication['MessageID'] = 'TEST0000'
+    indication['OwningEntity'] = 'TEST'
+    indication['PerceivedSeverity'] = Uint16(2)  # Information
+    indication['ProbableCause'] = Uint16(0)  # Unknown
+    indication['SystemName'] = \
+        CIMProperty('SystemName', value=None, type='string')
+    indication['MessageArguments'] = \
+        CIMProperty('MessageArguments', value=[], type='string', is_array=True)
+
+    context.spinner_stop()
+
+    print("Sending the following test indication:\n{}".
+          format(indication.tomof()))
+
+    conn_kwargs = {}
+    conn_kwargs['creds'] = None
+    if listener.scheme == 'https':
+        url = 'https://localhost:{}'.format(listener.port)
+        conn_kwargs['x509'] = None
+        conn_kwargs['no_verification'] = True
+    else:  # http
+        url = 'http://localhost:{}'.format(listener.port)
+
+    conn = WBEMConnection(url, **conn_kwargs)
+
+    try:
+        conn.ExportIndication(indication)
+    except Error as exc:
+        raise click.ClickException(str(exc))
+
+    click.echo("Sent test indication to listener {} at {}".
+               format(name, url))

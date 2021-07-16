@@ -62,6 +62,7 @@ Help text for ``pywbemlistener``:
       show   Show a named WBEM indication listener.
       start  Start a named WBEM indication listener in the background.
       stop   Stop a named WBEM indication listener.
+      test   Send a test indication to a named WBEM indication listener.
       run    Run as a named WBEM indication listener.
 
 
@@ -259,6 +260,33 @@ Help text for ``pywbemlistener stop`` (see :ref:`pywbemlistener stop command`):
       Examples:
 
         pywbemlistener stop lis1
+
+    Command Options:
+      -h, --help  Show this help message.
+
+
+.. _`pywbemlistener test --help`:
+
+pywbemlistener test --help
+--------------------------
+
+
+
+Help text for ``pywbemlistener test`` (see :ref:`pywbemlistener test command`):
+
+
+::
+
+    Usage: pywbemlistener [GENERAL-OPTIONS] test NAME [COMMAND-OPTIONS]
+
+      Send a test indication to a named WBEM indication listener.
+
+      The indication is an alert indication with fixed properties. This allows testing the listener and what it does with
+      the indication.
+
+      Examples:
+
+        pywbemlistener test lis1
 
     Command Options:
       -h, --help  Show this help message.

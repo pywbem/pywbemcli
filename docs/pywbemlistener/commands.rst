@@ -26,6 +26,7 @@ The pywbemlistener commands are:
 * :ref:`pywbemlistener show command` - Show a named WBEM indication listener.
 * :ref:`pywbemlistener start command` - Start a named WBEM indication listener in the background.
 * :ref:`pywbemlistener stop command` -  Stop a named WBEM indication listener.
+* :ref:`pywbemlistener test command` -  Send a test indication to a named WBEM indication listener.
 * :ref:`pywbemlistener run command` - Run as a named WBEM indication listener.
 
 
@@ -220,6 +221,39 @@ Example:
     Shut down listener lis1 running at http://localhost:25989
 
 See :ref:`pywbemlistener stop --help` for the exact help output of the command.
+
+
+.. _`pywbemlistener test command`:
+
+``pywbemlistener test`` command
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``pywbemlistener test`` command sends a test indication to a running WBEM
+indication listener on the local system.
+
+Example:
+
+.. code-block:: text
+
+    $ pywbemlistener test lis1
+    Sending the following test indication:
+    instance of CIM_AlertIndication {
+       IndicationIdentifier = NULL;
+       IndicationTime = "20210711160151.847111+000";
+       AlertingElementFormat = 2;
+       AlertingManagedElement = NULL;
+       AlertType = 2;
+       Message = "Test message";
+       MessageID = "TEST0000";
+       OwningEntity = "TEST";
+       PerceivedSeverity = 2;
+       ProbableCause = 0;
+       SystemName = NULL;
+       MessageArguments = { };
+    };
+    Sent test indication to listener lis1 at http://localhost:25989
+
+See :ref:`pywbemlistener test --help` for the exact help output of the command.
 
 
 .. _`pywbemlistener run command`:
