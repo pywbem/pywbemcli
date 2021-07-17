@@ -77,7 +77,12 @@ PYTHON_MOCK_FILE_PATH = os.path.join(TEST_DIR, 'simple_python_mock_script.py')
 BAD_MOF_FILE_PATH = os.path.join(TEST_DIR, 'mof_with_error.mof')
 BAD_PY_FILE_PATH = os.path.join(TEST_DIR, 'py_with_error.py')
 
-MOCK_SERVER_MODEL = os.path.join(TEST_DIR, 'testmock', 'wbemserver_mock.py')
+SIMPLE_DISABLEPULL_MOCK_SCRIPT = 'simple_disablepull_mock_script.py'
+SIMPLE_DISABLEPULL_MOCK_SCRIPT_PATH = os.path.join(
+    TEST_DIR, SIMPLE_DISABLEPULL_MOCK_SCRIPT)
+
+MOCK_SERVER_MODEL = os.path.join(TEST_DIR, 'testmock',
+                                 'wbemserver_mock_script.py')
 
 GENERAL_HELP_LINES = [
     """
@@ -606,26 +611,67 @@ TEST_CASES = [
 
     ['Verify uses pull operation with option --use-pull either',
      {'general': ['--mock-server', SIMPLE_MOCK_FILE_PATH, '--timestats',
-                  '--use-pull', 'either'],
+                  '--use-pull', 'either', '--pull-max-cnt', '1'],
       'cmdgrp': 'instance',
       'args': ['enumerate', 'CIM_Foo']},
-     {'stdout': ['instance of CIM_Foo {',
-                 'Client statistics',
-                 'Operation Count Errors',
-                 'OpenEnumerateInstances'],
+     {'stdout': [r'instance of CIM_Foo {',
+                 r'Client statistics',
+                 r'Operation +Count +Errors',
+                 r'^ *OpenEnumerateInstances'],  # Does not confirm no Enum...
       'rc': 0,
-      'test': 'innows'},
+      'test': 'regex'},
+     None, OK],
+
+    ['Verify pull fails options --use-pull either, --disable-pull-operations',
+     {'general': ['--mock-server', SIMPLE_MOCK_FILE_PATH, '--timestats',
+                  '--use-pull', 'either', '--pull-max-cnt', '1'],
+      'cmdgrp': 'instance',
+      'args': ['enumerate', 'CIM_Foo']},
+     {'stdout': [r'instance of CIM_Foo {',
+                 r'Client statistics',
+                 r'Operation +Count +Errors',
+                 r'^ *OpenEnumerateInstances'],  # Does not confirm no Enum...
+      'rc': 0,
+      'test': 'regex'},
+     None, OK],
+
+    ['Verify pull fails options --use-pull either & disabled pull operations, '
+     'confirms exception on OpenEnumerateInstances',
+     {'general': ['--mock-server', SIMPLE_DISABLEPULL_MOCK_SCRIPT_PATH,
+                  '--log', 'api=stderr:summary', '--use-pull', 'either'],
+      'cmdgrp': 'instance',
+      'args': ['enumerate', 'CIM_Foo']},
+     {'stderr': ['Exception:.*OpenEnumerateInstances'],
+      'rc': 0,
+      'test': 'regex'},
+     None, OK],
+
+    ['Verify pull fails options --use-pull either & disabled pull operations, '
+     'confirms only EnumerateInstances on second request',
+     {'general': ['--mock-server', SIMPLE_DISABLEPULL_MOCK_SCRIPT_PATH,
+                  '--use-pull', 'either'],
+      'stdin': ['instance enumerate CIM_Foo',
+                'statistics reset',
+                '--timestats instance enumerate CIM_Foo']},
+     {'stdout': [r'instance of CIM_Foo {',
+                 r'Client statistics',
+                 r'Operation +Count +Errors',
+                 r'EnumerateInstances',
+                 r'[^n]EnumerateInstances'],
+      'rc': 0,
+      'test': 'regex'},
      None, OK],
 
     ['Verify uses pull operation with option --use-pull yes',
      {'general': ['--mock-server', SIMPLE_MOCK_FILE_PATH, '--timestats',
-                  '--use-pull', 'yes'],
+                  '--use-pull', 'yes', '--pull-max-cnt', '1'],
       'cmdgrp': 'instance',
       'args': ['enumerate', 'CIM_Foo']},
      {'stdout': ['instance of CIM_Foo {',
                  'Client statistics',
                  'Operation Count Errors',
-                 'OpenEnumerateInstances'],
+                 'OpenEnumerateInstances 1',
+                 'PullInstancesWithPath 11'],
       'rc': 0,
       'test': 'innows'},
      None, OK],
@@ -635,12 +681,13 @@ TEST_CASES = [
                   '--use-pull', 'no'],
       'cmdgrp': 'instance',
       'args': ['enumerate', 'CIM_Foo']},
-     {'stdout': ['instance of CIM_Foo {',
-                 'Client statistics',
-                 'Operation Count Errors',
-                 'EnumerateInstances'],  # Not perfect: Also matches OpenEnum..
+     {'stdout': [r'instance of CIM_Foo ',
+                 r'Client statistics',
+                 r'Operation +Count +Errors',
+                 r'^ *EnumerateInstances',      # Enumerate returned
+                 r'[^n]EnumerateInstances'],    # no OpenEnumerate
       'rc': 0,
-      'test': 'innows'},
+      'test': 'regex'},
      None, OK],
 
     ['Verify --mock-server and -server not allowed',
@@ -1412,6 +1459,8 @@ TEST_CASES = [
 ]
 
 # TODO add test for pull operations with pull ops max size variations
+# There is one in test_generaloptions for size 1 that tests results with
+# statistics report.
 
 
 class TestGeneralOptions(CLITestsBase):

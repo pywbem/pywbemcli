@@ -63,7 +63,8 @@ INVOKE_METHOD_MOCK_FILE = INVOKE_METHOD_MOCK_FILE_0 if PYWBEM_0 else \
 
 COMPLEX_ASSOC_MODEL = "complex_assoc_model.mof"
 
-WBEMSERVER_MOCK_MODEL = os.path.join('testmock', 'wbemserver_mock.py')
+MOCK_SERVER_MODEL = os.path.join(TEST_DIR, 'testmock',
+                                 'wbemserver_mock_script.py')
 
 
 #
@@ -1070,7 +1071,7 @@ Instances: TST_Person
       'general': ['-o', 'simple']},
      {'stdout': "CreationClassName    Name    ObjectManagerCreationClassName",
       'test': 'innows'},
-     WBEMSERVER_MOCK_MODEL, RUN],
+     MOCK_SERVER_MODEL, OK],
 
     #
     # instance enumerate error returns
@@ -2910,8 +2911,8 @@ interop      TST_PersonExp        4
       'test': 'innows'},
      None, OK],
 
-    ['Verify instance command query execution. Returns error becasue '
-     'mock does not support query',
+    ['Verify instance command query execution. Returns error because mock does '
+     'not support query',
      ['query', 'Select blah from blah'],
      {'stderr': ['Error: CIMError: 14 (CIM_ERR_QUERY_LANGUAGE_NOT_SUPPORTED): ',
                  "FilterQueryLanguage 'DMTF:CQL' not supported"],

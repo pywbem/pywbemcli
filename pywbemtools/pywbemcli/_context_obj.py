@@ -112,11 +112,11 @@ class ContextObj(object):
 
     def __repr__(self):
         return 'ContextObj(at {:08x}, pywbem_server={!r}, outputformat={}, ' \
-               'use_pull={}, pull_max_cnt={}, timestats={}, verbose={}, ' \
-               'spinner_enabled={}, interactive_mode={}' \
+               'use_pull={}, pull_max_cnt={}, timestats={}, log={}, ' \
+               'verbose={}, spinner_enabled={}, interactive_mode={}' \
                .format(id(self), self._pywbem_server, self.output_format,
                        self.use_pull, self.pull_max_cnt, self.timestats,
-                       self.verbose, self.spinner_enabled,
+                       self.log, self.verbose, self.spinner_enabled,
                        self._interactive_mode)
 
     @property

@@ -31,7 +31,8 @@ TEST_DIR = os.path.dirname(__file__)
 SIMPLE_MOCK_FILE = 'simple_mock_model.mof'
 INVOKE_METHOD_MOCK_FILE = 'simple_mock_invokemethod.py'
 
-MOCK_SERVER_MODEL = os.path.join('testmock', 'wbemserver_mock.py')
+MOCK_SERVER_MODEL = os.path.join(TEST_DIR, 'testmock',
+                                 'wbemserver_mock_script.py')
 
 # The empty mock model is used to ensure that the new model that is added does
 # not modify any existing elements in the repository.
@@ -46,8 +47,6 @@ with open(SIMPLE_MOCK_MODEL_FILEPATH, 'r') as fp:
 
 MOF_WITH_ERROR_FILEPATH = os.path.join(
     os.path.dirname(__file__), 'mof_with_error.mof')
-
-MOCK_SERVER_MODEL = os.path.join('testmock', 'wbemserver_mock.py')
 
 QUALIFIER_FILTER_MODEL = "qualifier_filter_model.mof"
 

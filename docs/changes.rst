@@ -58,6 +58,11 @@ Released: not yet
 * Moved the environment variable names from being class attributes on the
   PywbemServer class to become constants in the config module. (issue #658)
 
+* Cleanup the test code used as pywbemcli scripts.  Named all of them
+  with the last part of the name  _script.py and modified them to use the
+  setup initialization with Python 3.6 and greater as well as the old
+  script interface.
+
 **Known issues:**
 
 * See `list of open issues`_.
