@@ -60,6 +60,20 @@ except AttributeError:
     SIGNAL_RUN_STARTUP_SUCCESS = signal.SIGBREAK
 SIGNAL_RUN_STARTUP_FAILURE = signal.SIGINT
 
+# Signal used to reqwuest termination of the 'run' process
+if sys.platform == 'win32':
+    # Note that on Windows, SIGTERM is handled by the CRT and leads to
+    # immediate termination of the process without any Python cleanup, signal
+    # handlers or exit handlers get control anymore. Using SIGBREAK also
+    # does not do any cleanup, although it is not clear why.
+    # For details, see https://stackoverflow.com/a/35792192/1424462
+    # pylint: disable=no-member
+    SIGNAL_TERMINATE_SEND = signal.CTRL_BREAK_EVENT
+    SIGNAL_TERMINATE_HANDLE = signal.SIGBREAK
+else:
+    SIGNAL_TERMINATE_SEND = signal.SIGTERM
+    SIGNAL_TERMINATE_HANDLE = signal.SIGTERM
+
 # Status and condition used to communicate the startup completion status of the
 # 'run' process between the signal handlers and other functions in the
 # 'start' process.
@@ -595,21 +609,29 @@ def run_exit_handler(start_pid, log_fp):
 
     In addition, it closes the log_fp log file.
     """
-    if _config.VERBOSE_PROCESSES_ENABLED:
-        print_out("Run process exit handler: Sending failure signal ({}) to "
-                  "start process {}".
-                  format(SIGNAL_RUN_STARTUP_FAILURE, start_pid))
     try:
-        os.kill(start_pid, SIGNAL_RUN_STARTUP_FAILURE)  # Sends the signal
-    except OSError:
-        # Note: ProcessLookupError is a subclass of OSError but was introduced
-        # only in Python 3.3.
+        start_p = psutil.Process(start_pid)
+    except psutil.NoSuchProcess:
+        start_p = None
 
-        # The original start parent no longer exists -> the earlier startup
-        # succeeded.
+    if start_p:
         if _config.VERBOSE_PROCESSES_ENABLED:
-            print_out("Run process exit handler: Start process {} does not "
-                      "exist anymore".format(start_pid))
+            print_out("Run process exit handler: Sending failure signal ({}) "
+                      "to start process {}".
+                      format(SIGNAL_RUN_STARTUP_FAILURE, start_pid))
+        try:
+            os.kill(start_pid, SIGNAL_RUN_STARTUP_FAILURE)  # Sends the signal
+        except OSError:
+            # Note: ProcessLookupError is a subclass of OSError but was
+            # introduced only in Python 3.3.
+
+            # The original start parent no longer exists.
+            # This can only happen if the process goes away in the short time
+            # window between checking for it at the begin of this function,
+            # and here.
+            if _config.VERBOSE_PROCESSES_ENABLED:
+                print_out("Run process exit handler: Start process {} does "
+                          "not exist anymore".format(start_pid))
 
     if log_fp:
         print_out("Closing 'run' output log file at {}".format(datetime.now()))
@@ -807,14 +829,16 @@ def run_term_signal_handler(sig, frame):
     # pylint: disable=unused-argument
     """
     Signal handler for the 'run' command that gets called for the
-    SIGTERM signal, i.e. when the 'run' process gets terminated by
-    some means.
+    SIGNAL_TERMINATE_HANDLE signal, i.e. when the 'run' process gets terminated
+    by some means.
 
-    Ths handler ensures that the main loop of the the 'run' command
+    This handler ensures that the main loop of the the 'run' command
     gets control and can gracefully stop the listener.
     """
     if _config.VERBOSE_PROCESSES_ENABLED:
         print_out("Run process: Received termination signal ({})".format(sig))
+
+    # This triggers the registered exit handler run_exit_handler()
     raise SystemExit(1)
 
 
@@ -937,7 +961,7 @@ def cmd_listener_run(context, name, options):
 
     # Register a termination signal handler that causes the loop further down
     # to get control via SystemExit.
-    signal.signal(signal.SIGTERM, run_term_signal_handler)
+    signal.signal(SIGNAL_TERMINATE_HANDLE, run_term_signal_handler)
 
     # If this run process is started from a start process, register a Python
     # atexit handler to make sure we get control when Click exceptions terminate
@@ -1122,10 +1146,11 @@ def cmd_listener_start(context, name, options):
 
     prepare_startup_completion()
 
-    if six.PY2:
-        popen_kwargs = dict(shell=False)
-    else:
-        popen_kwargs = dict(shell=False, start_new_session=True)
+    popen_kwargs = dict(shell=False)
+    if sys.platform == 'win32':
+        popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+    if six.PY3:
+        popen_kwargs['start_new_session'] = True
 
     if _config.VERBOSE_PROCESSES_ENABLED:
         print_out("Start process {}: Starting run process as: {}".
@@ -1162,8 +1187,9 @@ def cmd_listener_stop(context, name):
 
     p = psutil.Process(listener.pid)
     if _config.VERBOSE_PROCESSES_ENABLED:
-        print_out("Terminating run process {}".format(listener.pid))
-    p.terminate()
+        print_out("Sending termination signal ({}) to run process {}".
+                  format(SIGNAL_TERMINATE_SEND, listener.pid))
+    os.kill(listener.pid, SIGNAL_TERMINATE_SEND)  # Sends the signal
     if _config.VERBOSE_PROCESSES_ENABLED:
         print_out("Waiting for run process {} to complete".format(listener.pid))
     p.wait()
