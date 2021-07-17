@@ -646,6 +646,22 @@ TEST_CASES = [
       'test': 'regex'},
      None, OK],
 
+    ['Verify pull fails options --use-pull either & disabled pull operations, '
+     'confirms only EnumerateInstances on second request',
+     {'general': ['--mock-server', SIMPLE_DISABLEPULL_MOCK_SCRIPT_PATH,
+                  '--use-pull', 'either'],
+      'stdin': ['instance enumerate CIM_Foo',
+                'statistics reset',
+                '--timestats instance enumerate CIM_Foo']},
+     {'stdout': [r'instance of CIM_Foo {',
+                 r'Client statistics',
+                 r'Operation +Count +Errors',
+                 r'EnumerateInstances',
+                 r'[^n]EnumerateInstances'],
+      'rc': 0,
+      'test': 'regex'},
+     None, OK],
+
     ['Verify uses pull operation with option --use-pull yes',
      {'general': ['--mock-server', SIMPLE_MOCK_FILE_PATH, '--timestats',
                   '--use-pull', 'yes', '--pull-max-cnt', '1'],
@@ -1443,6 +1459,8 @@ TEST_CASES = [
 ]
 
 # TODO add test for pull operations with pull ops max size variations
+# There is one in test_generaloptions for size 1 that tests results with
+# statistics report.
 
 
 class TestGeneralOptions(CLITestsBase):
